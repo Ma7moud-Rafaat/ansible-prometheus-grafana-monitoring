@@ -1,0 +1,6 @@
+- name: Install and configure Grafana
+  hosts: grafana
+  become: yes
+  roles:
+    - grafana
+

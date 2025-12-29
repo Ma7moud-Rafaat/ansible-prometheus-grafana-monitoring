@@ -1,0 +1,27 @@
+- name: Add Grafana repository
+  yum_repository:
+    name: grafana
+    description: Grafana Repository
+    baseurl: https://rpm.grafana.com
+    gpgcheck: yes
+    gpgkey: https://rpm.grafana.com/gpg.key
+
+- name: Install Grafana
+  dnf:
+    name: grafana
+    state: present
+
+- name: Start Grafana service
+  systemd:
+    name: grafana-server
+    state: started
+    enabled: yes
+
+- name: Open Grafana port
+  command: firewall-cmd --add-port=3000/tcp --permanent
+  become: yes
+
+- name: Reload firewalld
+  command: firewall-cmd --reload
+  become: yes
+

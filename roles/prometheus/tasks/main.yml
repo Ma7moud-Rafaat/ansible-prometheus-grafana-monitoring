@@ -1,0 +1,54 @@
+- name: Create prometheus user
+  user:
+    name: prometheus
+    shell: /sbin/nologin
+
+- name: Download prometheus
+  get_url:
+    url: https://github.com/prometheus/prometheus/releases/download/v2.48.0/prometheus-2.48.0.linux-amd64.tar.gz
+    dest: /tmp/prometheus.tar.gz
+
+- name: Extract prometheus
+  unarchive:
+    src: /tmp/prometheus.tar.gz
+    dest: /opt
+    remote_src: yes
+
+- name: Copy prometheus config
+  template:
+    src: prometheus.yml.j2
+    dest: /opt/prometheus-2.48.0.linux-amd64/prometheus.yml
+
+- name: Create systemd service
+  copy:
+    dest: /etc/systemd/system/prometheus.service
+    content: |
+      [Unit]
+      Description=Prometheus
+      After=network.target
+
+      [Service]
+      ExecStart=/opt/prometheus-2.48.0.linux-amd64/prometheus \
+      --config.file=/opt/prometheus-2.48.0.linux-amd64/prometheus.yml
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Start prometheus
+  systemd:
+    name: prometheus
+    state: started
+    enabled: yes
+
+- name: Open Prometheus port
+  command: firewall-cmd --add-port=9090/tcp --permanent
+  become: yes
+
+- name: Reload firewalld
+  command: firewall-cmd --reload
+  become: yes
+

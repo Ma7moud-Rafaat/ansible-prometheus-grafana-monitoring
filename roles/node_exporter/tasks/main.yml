@@ -1,0 +1,69 @@
+- name: Create node_exporter user
+  user:
+    name: node_exporter
+    shell: /sbin/nologin
+
+- name: Download node exporter
+  get_url:
+    url: https://github.com/prometheus/node_exporter/releases/download/v1.6.1/node_exporter-1.6.1.linux-amd64.tar.gz
+    dest: /tmp/node_exporter.tar.gz
+    mode: '0644'
+
+- name: Create node exporter directory
+  file:
+    path: /opt/node_exporter
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Extract node exporter
+  unarchive:
+    src: /tmp/node_exporter.tar.gz
+    dest: /opt/node_exporter
+    remote_src: yes
+    extra_opts:
+      - --strip-components=1
+
+- name: Copy node exporter binary
+  copy:
+    src: /opt/node_exporter/node_exporter
+    dest: /usr/local/bin/node_exporter
+    owner: node_exporter
+    group: node_exporter
+    mode: '0755'
+    remote_src: yes
+
+- name: Create systemd service
+  copy:
+    dest: /etc/systemd/system/node_exporter.service
+    content: |
+      [Unit]
+      Description=Node Exporter
+      After=network.target
+
+      [Service]
+      User=node_exporter
+      ExecStart=/usr/local/bin/node_exporter
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+
+- name: Start node exporter
+  systemd:
+    name: node_exporter
+    state: started
+    enabled: yes
+
+- name: Open Node Exporter port
+  command: firewall-cmd --add-port=9100/tcp --permanent
+  become: yes
+
+- name: Reload firewalld
+  command: firewall-cmd --reload
+  become: yes
+
